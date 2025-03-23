@@ -11,9 +11,10 @@
         .sidebar { width: 250px; background: #333; color: white; padding: 20px; height: 100vh; }
         .sidebar button { width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; }
         .content { flex-grow: 1; padding: 20px; text-align: center; }
-        video { border: 2px solid black; }
+        .register, .recognize { display: none; }
+        video { border: 2px solid black; width: 100%; max-width: 640px; }
         input, label { display: block; margin: 10px auto; }
-        #registerForm { display: none; }
+        .details { margin-top: 20px; padding: 10px; background: #f3f3f3; }
     </style>
 </head>
 <body>
@@ -23,8 +24,9 @@
     </div>
     
     <div class="content">
-        <div id="registerForm">
+        <div id="registerForm" class="register">
             <h2>Register Face</h2>
+            <video id="regVideo" autoplay></video>
             <form id="faceForm">
                 <label>Name: <input type="text" id="name" required></label>
                 <label>Contact: <input type="text" id="contact" required></label>
@@ -34,11 +36,13 @@
             </form>
         </div>
         
-        <div id="recognitionView" style="display:none;">
+        <div id="recognitionView" class="recognize">
             <h2>Recognize Face</h2>
-            <video id="video" width="640" height="480" autoplay></video>
-            <canvas id="canvas"></canvas>
-            <p id="recognizedDetails"></p>
+            <video id="recVideo" autoplay></video>
+            <div class="details">
+                <h3>Recognized Details</h3>
+                <p id="recognizedDetails">Waiting for recognition...</p>
+            </div>
         </div>
     </div>
     
@@ -48,16 +52,18 @@
         function showRegister() {
             document.getElementById('registerForm').style.display = 'block';
             document.getElementById('recognitionView').style.display = 'none';
+            setupCamera('regVideo');
         }
 
         function showRecognize() {
             document.getElementById('recognitionView').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
-            setupCamera();
+            setupCamera('recVideo');
+            recognizeFaces();
         }
 
-        async function setupCamera() {
-            const video = document.getElementById('video');
+        async function setupCamera(videoId) {
+            const video = document.getElementById(videoId);
             const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
             video.srcObject = stream;
         }
@@ -69,7 +75,7 @@
         }
 
         async function registerFace() {
-            const video = document.getElementById('video');
+            const video = document.getElementById('regVideo');
             const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if (detections) {
                 const name = document.getElementById('name').value;
@@ -85,7 +91,7 @@
         }
 
         async function recognizeFaces() {
-            const video = document.getElementById('video');
+            const video = document.getElementById('recVideo');
             setInterval(async () => {
                 const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
                 if (detections) {
