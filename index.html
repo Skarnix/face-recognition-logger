@@ -3,144 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Recognition Logger</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api"></script>
+    <title>Simple Google Sheet Logger</title>
     <style>
-        body { display: flex; font-family: Arial, sans-serif; }
-        .sidebar { width: 250px; background: #333; color: white; padding: 20px; height: 100vh; }
-        .sidebar button { width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; }
-        .content { flex-grow: 1; padding: 20px; text-align: center; }
-        .register, .recognize { display: none; }
-        video { border: 2px solid black; width: 100%; max-width: 640px; }
-        input, label { display: block; margin: 10px auto; }
-        .details { margin-top: 20px; padding: 10px; background: #f3f3f3; }
-        .loading { display: none; font-size: 18px; color: blue; }
+        body { text-align: center; font-family: Arial, sans-serif; }
+        input { padding: 10px; margin: 10px; }
+        button { padding: 10px; }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <button onclick="showRegister()">Register Face</button>
-        <button onclick="showRecognize()">Recognize Face</button>
-    </div>
-    
-    <div class="content">
-        <div id="registerForm" class="register">
-            <h2>Register Face</h2>
-            <video id="regVideo" autoplay></video>
-            <form id="faceForm">
-                <label>Name: <input type="text" id="name" required></label>
-                <label>Contact: <input type="text" id="contact" required></label>
-                <label>Designation: <input type="text" id="designation" required></label>
-                <label>Date of Birth: <input type="date" id="dob" required></label>
-                <button type="button" onclick="registerFace()">Register</button>
-            </form>
-            <p id="loading" class="loading">Registering face, please wait...</p>
-        </div>
-        
-        <div id="recognitionView" class="recognize">
-            <h2>Recognize Face</h2>
-            <video id="recVideo" autoplay></video>
-            <div class="details">
-                <h3>Recognized Details</h3>
-                <p id="recognizedDetails">Waiting for recognition...</p>
-            </div>
-        </div>
-    </div>
-    
+    <h2>Enter Text and Send to Google Sheet</h2>
+    <input type="text" id="textInput" placeholder="Enter something...">
+    <button onclick="sendToSheet()">Submit</button>
+    <p id="status"></p>
+
     <script>
-        let registeredDescriptors = [];
-
-        function showRegister() {
-            document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('recognitionView').style.display = 'none';
-            setupCamera('regVideo');
-        }
-
-        function showRecognize() {
-            document.getElementById('recognitionView').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            setupCamera('recVideo');
-            recognizeFaces();
-        }
-
-        async function setupCamera(videoId) {
-            const video = document.getElementById(videoId);
-            const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-            video.srcObject = stream;
-        }
-
-        async function loadModels() {
-            await faceapi.nets.tinyFaceDetector.loadFromUri('models');
-            await faceapi.nets.faceRecognitionNet.loadFromUri('models');
-            await faceapi.nets.faceLandmark68Net.loadFromUri('models');
-        }
-
-        async function registerFace() {
-            document.getElementById('loading').style.display = 'block';
-            const video = document.getElementById('regVideo');
-            const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-            if (detections) {
-                const name = document.getElementById('name').value;
-                const contact = document.getElementById('contact').value;
-                const designation = document.getElementById('designation').value;
-                const dob = document.getElementById('dob').value;
-                registeredDescriptors.push({ name, contact, designation, dob, descriptor: detections.descriptor });
-                logToGoogleSheet(name, contact, designation, dob);
-            } else {
-                alert('No face detected. Try again!');
-            }
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        async function recognizeFaces() {
-            const video = document.getElementById('recVideo');
-            setInterval(async () => {
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                if (detections) {
-                    const match = findMatch(detections.descriptor);
-                    if (match) {
-                        document.getElementById('recognizedDetails').innerText = `Name: ${match.name}, Designation: ${match.designation}`;
-                        logRecognitionToGoogleSheet(match.name, match.designation);
-                    }
-                }
-            }, 3000);
-        }
-
-        function findMatch(descriptor) {
-            for (let regFace of registeredDescriptors) {
-                const distance = faceapi.euclideanDistance(descriptor, regFace.descriptor);
-                if (distance < 0.6) {
-                    return regFace;
-                }
-            }
-            return null;
-        }
-
-        function logToGoogleSheet(name, contact, designation, dob) {
-            fetch('https://script.google.com/macros/s/AKfycbxH_mGR4j107Owa55QqYkVzVgQRX9AFkfLxIaxR46PNGaVIDW7H-lEgzjcdcR94X2fkZw/exec', {
+        function sendToSheet() {
+            const text = document.getElementById('textInput').value;
+            document.getElementById('status').innerText = 'Sending...';
+            fetch('https://script.google.com/macros/s/AKfycbwA_g6hkrkUvu-FE_t8iIE67HJyisgXyTb8c-CxkfDasTuLZ2JHa7U4BII_-b-d9_7DJw/exec', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, contact, designation, dob })
-            }).then(response => response.json())
-              .then(data => {
-                  alert('Face registered successfully!');
-                  console.log('Registered:', data);
-              })
-              .catch(error => console.error('Error:', error));
+                body: JSON.stringify({ text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerText = 'Data sent successfully!';
+                console.log('Response:', data);
+            })
+            .catch(error => {
+                document.getElementById('status').innerText = 'Error sending data';
+                console.error('Error:', error);
+            });
         }
-
-        function logRecognitionToGoogleSheet(name, designation) {
-            fetch('https://script.google.com/macros/s/AKfycbxH_mGR4j107Owa55QqYkVzVgQRX9AFkfLxIaxR46PNGaVIDW7H-lEgzjcdcR94X2fkZw/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, designation, timestamp: new Date().toISOString() })
-            }).then(response => response.json())
-              .then(data => console.log('Logged Recognition:', data))
-              .catch(error => console.error('Error:', error));
-        }
-
-        loadModels();
     </script>
 </body>
 </html>
