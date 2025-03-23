@@ -15,6 +15,7 @@
         video { border: 2px solid black; width: 100%; max-width: 640px; }
         input, label { display: block; margin: 10px auto; }
         .details { margin-top: 20px; padding: 10px; background: #f3f3f3; }
+        .loading { display: none; font-size: 18px; color: blue; }
     </style>
 </head>
 <body>
@@ -34,6 +35,7 @@
                 <label>Date of Birth: <input type="date" id="dob" required></label>
                 <button type="button" onclick="registerFace()">Register</button>
             </form>
+            <p id="loading" class="loading">Registering face, please wait...</p>
         </div>
         
         <div id="recognitionView" class="recognize">
@@ -75,6 +77,7 @@
         }
 
         async function registerFace() {
+            document.getElementById('loading').style.display = 'block';
             const video = document.getElementById('regVideo');
             const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if (detections) {
@@ -84,10 +87,10 @@
                 const dob = document.getElementById('dob').value;
                 registeredDescriptors.push({ name, contact, designation, dob, descriptor: detections.descriptor });
                 logToGoogleSheet(name, contact, designation, dob);
-                alert('Face registered successfully!');
             } else {
                 alert('No face detected. Try again!');
             }
+            document.getElementById('loading').style.display = 'none';
         }
 
         async function recognizeFaces() {
@@ -120,7 +123,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, contact, designation, dob })
             }).then(response => response.json())
-              .then(data => console.log('Registered:', data))
+              .then(data => {
+                  alert('Face registered successfully!');
+                  console.log('Registered:', data);
+              })
               .catch(error => console.error('Error:', error));
         }
 
