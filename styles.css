@@ -1,0 +1,12 @@
+body { 
+    text-align: center; 
+    font-family: Arial, sans-serif; 
+}
+video { 
+    border: 2px solid black; 
+}
+button { 
+    margin: 10px; 
+    padding: 10px; 
+    font-size: 16px; 
+}
